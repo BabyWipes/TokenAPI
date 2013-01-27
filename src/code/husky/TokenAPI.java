@@ -117,7 +117,7 @@ public class TokenAPI extends JavaPlugin implements Listener {
 		ResultSet res;
 		try {
 			res = this.qr.executeQuery("SELECT * FROM '" + "tokens" + "' WHERE PlayerName='" + name + "';");
-			if(res == null) {
+			if(res.getInt("tokens") == 0 || res.getString("tokens") == null) {
 				qr.executeUpdate("INSERT INTO `tokens`.`tokens` (`PlayerName`, `tokens`) VALUES ('" + name + "', '0');");
 			}
 		} catch (SQLException e2) {
