@@ -3,3 +3,4 @@ main: code.husky.TokenAPI
 version: 1.0
 author:
 - -_Husky_-
+loadbefore: [ TokenFrontend ]

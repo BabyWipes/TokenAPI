@@ -18,18 +18,21 @@ public class TokenAPI extends JavaPlugin implements Listener {
 	YamlConfiguration cfg = YamlConfiguration.loadConfiguration(new File("plugins/TokenAPI/config.yml"));
 	String usr = getUser();
 	String ps = getPass();
-	MySQL m = new MySQL(this.cfg.getString("MySQL-host"), Integer.toString(this.cfg.getInt("MySQL-port")), this.cfg.getString("MySQL-database"), this.usr, this.ps);
+	String prst = Integer.toString(this.cfg.getInt("MySQL-port"));
+	MySQL m = new MySQL(this.cfg.getString("MySQL-host"), prst, this.cfg.getString("MySQL-database"), this.usr, this.ps);
 	Connection c = null;
 	Statement qr = null;
 
 	public void onEnable() {
+		System.out.println("[TokenAPI] Connecting to Database");
 		setupData();
 		setupMySQL();
 		getServer().getPluginManager().registerEvents(this, this);
 	}
 
 	public void onDisable() {
-
+		m.closeConnection(c);
+		System.out.println("[TokenAPI] Closing MySQL Connection!");
 	}
 
 	private void setupData()
@@ -70,13 +73,13 @@ public class TokenAPI extends JavaPlugin implements Listener {
 	}
 
 	private void setupMySQL() {
-		this.c = this.m.open();
+		c = m.open();
 	}
 
 	public void addToken(Player p, int amount) {
-		int l = amount -= 1;
 		try {
-			qr.executeUpdate("UPDATE  `tokens`.`tokens` SET  `tokens` =  '" + amount + "' WHERE  `tokens`.`PlayerName` =  '" + p.getName() + "' AND  `tokens`.`tokens` =" + l + ";");
+			Statement ssd = m.open().createStatement();
+			ssd.executeUpdate("UPDATE `tokens`.`tokens` SET tokens = '" + amount + "' WHERE PlayerName = '" + p.getName() +"';");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -85,9 +88,9 @@ public class TokenAPI extends JavaPlugin implements Listener {
 	public void removeToken(Player p, int amount) {
 		int cur = getTokens(p);
 		int hurr = cur - amount;
-		int l = hurr -= 1;
 		try {
-			qr.executeUpdate("UPDATE  `tokens`.`tokens` SET  `tokens` =  '" + hurr + "' WHERE  `tokens`.`PlayerName` =  '" + p.getName() + "' AND  `tokens`.`tokens` =" + l + ";");
+			Statement ssd = m.open().createStatement();
+			ssd.executeUpdate("UPDATE `tokens`.`tokens` SET tokens = '" + hurr + "' WHERE PlayerName = '" + p.getName() +"';");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -97,7 +100,8 @@ public class TokenAPI extends JavaPlugin implements Listener {
 		String name = p.getName();
 		int tokens = 0;
 		try {
-			ResultSet res = this.qr.executeQuery("SELECT * FROM " + this.cfg.getString("MySQL-table") + " WHERE PlayerName='" + name + "';");
+			Statement ssd = m.open().createStatement();
+			ResultSet res = ssd.executeQuery("SELECT * FROM tokens WHERE PlayerName = '" + name + "';");
 			res.next();
 			if(res.getString("PlayerName") == null) {
 				tokens = 0;
@@ -114,11 +118,13 @@ public class TokenAPI extends JavaPlugin implements Listener {
 	public void tokenListener(PlayerJoinEvent e) {
 		Player p = e.getPlayer();
 		String name = p.getName();
-		ResultSet res;
+		ResultSet res = null;
 		try {
-			res = this.qr.executeQuery("SELECT * FROM '" + "tokens" + "' WHERE PlayerName='" + name + "';");
-			if(res.getInt("tokens") == 0 || res.getString("tokens") == null) {
+			qr = c.createStatement();
+			res = this.qr.executeQuery("SELECT * FROM `tokens`.`tokens` WHERE PlayerName = '" + name + "';");
+			if(!res.next()) {
 				qr.executeUpdate("INSERT INTO `tokens`.`tokens` (`PlayerName`, `tokens`) VALUES ('" + name + "', '0');");
+				System.out.println("Inserted info");
 			}
 		} catch (SQLException e2) {
 			e2.printStackTrace();
